@@ -1,0 +1,91 @@
+package controller;
+
+import dao.FruitDao;
+import dao.OrderDao;
+import model.Fruit;
+import model.OrderDetail;
+import utils.Validation;
+import view.MenuView;
+import java.util.ArrayList;
+
+public class FruitShopController {
+    private FruitDao fruitDao = new FruitDao();
+    private OrderDao orderDao = new OrderDao();
+    private MenuView view = new MenuView();
+
+    public void seedSampleData() {
+        fruitDao.addFruit(new Fruit("F01", "Coconut", 2.0, 10, "Vietnam"));
+        fruitDao.addFruit(new Fruit("F02", "Orange", 3.0, 12, "US"));
+        fruitDao.addFruit(new Fruit("F03", "Apple", 4.0, 8, "Thailand"));
+        fruitDao.addFruit(new Fruit("F04", "Grape", 6.0, 5, "France"));
+    }
+
+    public void menu() {
+        while (true) {
+            view.displayMainMenu();
+            int choice = Validation.inputInt("", 1, 4);
+            switch (choice) {
+                case 1: createFruit(); break;
+                case 2: viewOrders(); break;
+                case 3: shopping(); break;
+                case 4:
+                    System.out.println("Exiting program. Goodbye!");
+                    return;
+            }
+        }
+    }
+
+    public void createFruit() {
+        do {
+            ArrayList<Fruit> list = fruitDao.getAllFruits();
+            String id = Validation.inputUniqueFruitId(list, "Input Fruit Id: ");
+            String name = Validation.inputString("Input Fruit Name: ");
+            double price = Validation.inputDouble("Input Price: ", 0.01, 1_000_000);
+            int qty = Validation.inputInt("Input Quantity: ", 0, 1_000_000);
+            String origin = Validation.inputString("Input Origin: ");
+            fruitDao.addFruit(new Fruit(id, name, price, qty, origin));
+            System.out.println("Fruit added successfully.");
+        } while (Validation.inputYN("Do you want to continue"));
+
+        view.displayFruitList(fruitDao.getAllFruits());
+    }
+
+    public void shopping() {
+        ArrayList<OrderDetail> cart = new ArrayList<>();
+        while (true) {
+            ArrayList<Fruit> list = fruitDao.getAllFruits();
+            if (list.isEmpty()) {
+                System.out.println("No fruits available.");
+                return;
+            }
+            view.displayFruitList(list);
+            int idx = Validation.inputInt("Select item (0 to finish): ", 0, list.size());
+            if (idx == 0) {
+                if (cart.isEmpty()) {
+                    System.out.println("No items selected.");
+                    return;
+                }
+                view.displayOrderDetail(cart, "Current Cart");
+                String customer = Validation.inputString("Input your name: ");
+                orderDao.addOrder(customer, cart);
+                System.out.println("Order saved for " + customer);
+                return;
+            }
+            Fruit chosen = fruitDao.findFruitByIndex(idx - 1);
+            int qty = Validation.inputInt("Please input quantity: ", 1, chosen.getQuantity());
+            boolean orderNow = Validation.inputYN("Do you want to order now");
+            cart.add(new OrderDetail(chosen, qty));
+            if (orderNow) {
+                view.displayOrderDetail(cart, "Preview Order");
+                String customer = Validation.inputString("Input your name: ");
+                orderDao.addOrder(customer, cart);
+                System.out.println("Order saved for " + customer);
+                return;
+            }
+        }
+    }
+
+    public void viewOrders() {
+        view.displayAllOrders(orderDao.getAllOrders());
+    }
+}
